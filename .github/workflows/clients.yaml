@@ -1,4 +1,4 @@
-name: Update Multiple Clients v.8.39
+name: Update Multiple Clients v.8.40
 
 on:
   push:
@@ -56,12 +56,16 @@ jobs:
                     for city in "${CITIES[@]}"; do
                         # Handle negative matches
                         if [[ "$city" == -* ]]; then
-                            # Negative match: exclude this city
-                            [ -n "$pattern" ] && pattern+=$'\n'
-                            pattern+="^(?!.*${city:1})"
+                            # Negative match: append negative lookahead to the pattern
+                            if [ -n "$pattern" ]; then
+                                pattern+="|"
+                            fi
+                            pattern+="$category.*${city:1}(?!.*${city:1})"
                         else
                             # Positive match: include this city
-                            [ -n "$pattern" ] && pattern+=$'\n'
+                            if [ -n "$pattern" ]; then
+                                pattern+="|"
+                            fi
                             pattern+="$category.*$city"
                         fi
                     done
@@ -72,12 +76,16 @@ jobs:
                 for part in "${FILTER_PARTS[@]}"; do
                     # Handle negative matches
                     if [[ "$part" == -* ]]; then
-                        # Negative match: exclude this part
-                        [ -n "$pattern" ] && pattern+=$'\n'
-                        pattern+="^(?!.*${part:1})"
+                        # Negative match: append negative lookahead to the pattern
+                        if [ -n "$pattern" ]; then
+                            pattern+="|"
+                        fi
+                        pattern+="${part:1}(?!.*${part:1})"
                     else
                         # Positive match: include this part
-                        [ -n "$pattern" ] && pattern+=$'\n'
+                        if [ -n "$pattern" ]; then
+                            pattern+="|"
+                        fi
                         pattern+="$part"
                     fi
                 done
