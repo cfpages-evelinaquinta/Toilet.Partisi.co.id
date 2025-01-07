@@ -1,4 +1,4 @@
-name: Update Multiple Clients v.8.42
+name: Update Multiple Clients v.8.43
 
 on:
   push:
@@ -54,14 +54,12 @@ jobs:
                     IFS=':' read -r category cities <<< "$part"
                     IFS=',' read -ra CITIES <<< "$cities"
                     for city in "${CITIES[@]}"; do
-                        # Handle negative matches
-                        if [[ "$city" == -* ]]; then
-                            # Negative match: append negative lookahead to the pattern
-                            [ -n "$pattern" ] && pattern+=$'\n'
-                            pattern+="$category.*${city:1}(?!.*${city:1})"
-                        else
+                        # Skip negative matches (they will be handled later)
+                        if [[ "$city" != -* ]]; then
                             # Positive match: include this city
-                            [ -n "$pattern" ] && pattern+=$'\n'
+                            if [ -n "$pattern" ]; then
+                                pattern+=$'\n'
+                            fi
                             pattern+="$category.*$city"
                         fi
                     done
@@ -70,14 +68,12 @@ jobs:
                 # Simple filter
                 IFS=',' read -ra FILTER_PARTS <<< "$filter"
                 for part in "${FILTER_PARTS[@]}"; do
-                    # Handle negative matches
-                    if [[ "$part" == -* ]]; then
-                        # Negative match: append negative lookahead to the pattern
-                        [ -n "$pattern" ] && pattern+=$'\n'
-                        pattern+="${part:1}(?!.*${part:1})"
-                    else
+                    # Skip negative matches (they will be handled later)
+                    if [[ "$part" != -* ]]; then
                         # Positive match: include this part
-                        [ -n "$pattern" ] && pattern+=$'\n'
+                        if [ -n "$pattern" ]; then
+                            pattern+=$'\n'
+                        fi
                         pattern+="$part"
                     fi
                 done
@@ -89,17 +85,28 @@ jobs:
           # Function to find files matching pattern
           find_matching_files() {
             local pattern="$1"
+            local filter="$2"  # Pass the original filter to check for negative matches
             local matching_files=""
 
-            # Split the pattern by newlines and search for each city
-            while IFS= read -r city; do
-                if [ -n "$city" ]; then
-                    # Escape dots and other special characters in the city name
-                    escaped_city=$(echo "$city" | sed 's/[.[\*^$()+?{|]/\\&/g')
-                    new_matches=$(find . -type f -name "*.html" | grep -i "$escaped_city" || true)
-                    matching_files+="$new_matches"$'\n'
-                fi
-            done <<< "$pattern"
+            # First, find files matching the positive pattern
+            if [ -n "$pattern" ]; then
+                matching_files=$(find . -type f -name "*.html" | grep -Ei "$pattern" || true)
+            else
+                matching_files=$(find . -type f -name "*.html")
+            fi
+
+            # Check if there are negative matches in the filter
+            if [[ "$filter" == *-* ]]; then
+                # Extract negative matches (e.g., -masin)
+                IFS=',' read -ra FILTER_PARTS <<< "$filter"
+                for part in "${FILTER_PARTS[@]}"; do
+                    if [[ "$part" == -* ]]; then
+                        # Exclude files containing the negative match (e.g., masin)
+                        negative_match="${part:1}"  # Remove the '-' prefix
+                        matching_files=$(echo "$matching_files" | grep -iv "$negative_match" || true)
+                    fi
+                done
+            fi
 
             # Remove duplicate files and empty lines
             echo "$matching_files" | sort -u | grep -v '^$'
