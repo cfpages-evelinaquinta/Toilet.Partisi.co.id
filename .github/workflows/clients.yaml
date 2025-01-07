@@ -1,4 +1,4 @@
-name: Update Multiple Clients v.8.38
+name: Update Multiple Clients v.8.39
 
 on:
   push:
@@ -48,25 +48,39 @@ jobs:
             
             # Check if the filter contains ':'
             if [[ "$filter" == *:* ]]; then
-              # Complex filter
-              IFS=';' read -ra FILTER_PARTS <<< "$filter"
-              for part in "${FILTER_PARTS[@]}"; do
-                IFS=':' read -r category cities <<< "$part"
-                IFS=',' read -ra CITIES <<< "$cities"
-                for city in "${CITIES[@]}"; do
-                  # Create "category AND city" pattern
-                  [ -n "$pattern" ] && pattern+=$'\n'
-                  pattern+="$category.*$city"
+                # Complex filter
+                IFS=';' read -ra FILTER_PARTS <<< "$filter"
+                for part in "${FILTER_PARTS[@]}"; do
+                    IFS=':' read -r category cities <<< "$part"
+                    IFS=',' read -ra CITIES <<< "$cities"
+                    for city in "${CITIES[@]}"; do
+                        # Handle negative matches
+                        if [[ "$city" == -* ]]; then
+                            # Negative match: exclude this city
+                            [ -n "$pattern" ] && pattern+=$'\n'
+                            pattern+="^(?!.*${city:1})"
+                        else
+                            # Positive match: include this city
+                            [ -n "$pattern" ] && pattern+=$'\n'
+                            pattern+="$category.*$city"
+                        fi
+                    done
                 done
-              done
             else
-              # Simple filter
-              IFS=',' read -ra FILTER_PARTS <<< "$filter"
-              for part in "${FILTER_PARTS[@]}"; do
-                 # Create single part pattern
-                [ -n "$pattern" ] && pattern+=$'\n'
-                pattern+="$part"
-              done
+                # Simple filter
+                IFS=',' read -ra FILTER_PARTS <<< "$filter"
+                for part in "${FILTER_PARTS[@]}"; do
+                    # Handle negative matches
+                    if [[ "$part" == -* ]]; then
+                        # Negative match: exclude this part
+                        [ -n "$pattern" ] && pattern+=$'\n'
+                        pattern+="^(?!.*${part:1})"
+                    else
+                        # Positive match: include this part
+                        [ -n "$pattern" ] && pattern+=$'\n'
+                        pattern+="$part"
+                    fi
+                done
             fi
             
             echo "$pattern"
