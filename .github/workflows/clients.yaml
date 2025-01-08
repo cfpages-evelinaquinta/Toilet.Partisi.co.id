@@ -1,4 +1,4 @@
-name: Update Multiple Clients v.9.00
+name: Update Multiple Clients v.9.01
 
 on:
   push:
@@ -173,7 +173,7 @@ jobs:
           # Regex for extracting address from .clients
           extract_address_from_clients() {
             local input="$1"
-             local regex='(^|.*\|)([\w\s\.\,\/\(\)\-]+\s*(?:(?:No|N0|RT|RW|Kec)\.\s*[\w\s\.\,\/\(\)\-]+)?\s*(?:(?:[0-9]{5})|(?:\d{1,4}(?:(?:\/\d{1,3})|\s*No)?(?:,\s*\w+)?(?:,\s*\w+)?(?:,\s*\w+)?(?:,\s*\w+)?(?:,\s*\w+)?)?)($|\|.*)'
+             local regex='(^|.*\|)([\w\s\.\,\/\(\)\-]+\s*(?:(?:No|N0|RT|RW|Kec)\.\s*[\w\s\.\,\/\(\)\-]+)?\s*(?:(?:[0-9]{5})|(?:\d{1,4}(?:(?:\/\d{1,3})|\s*No)?(?:,\s*\w+)?(?:,\s*\w+)?(?:,\s*\w+)?(?:,\s*\w+)?(?:,\s*\w+)?)?)(?=\||$)'
             if [[ "$input" =~ $regex ]]; then
                 echo "${BASH_REMATCH[2]}"
             else
@@ -208,25 +208,25 @@ jobs:
             
             for PART in "${PARTS[@]}"; do
               TRIMMED_PART="$(echo "$PART" | xargs)"
-              if [[ $TRIMMED_PART == https://* ]]; then
-                if [[ $TRIMMED_PART == *💬* ]]; then
-                  WAURL=$TRIMMED_PART
-                elif [[ $TRIMMED_PART == *📞* ]]; then
-                  PHURL=$TRIMMED_PART
-                fi
-              elif [[ $TRIMMED_PART =~ ^[0-9[:space:]]+$ ]]; then
-                PHONE=$TRIMMED_PART
-              elif [[ $TRIMMED_PART =~ [A-Z] ]]; then
-                NAME=$TRIMMED_PART
-              else
-                # Attempt to extract address
-                ADDRESS_TEMP=$(extract_address_from_clients "$LINE")
-                if [ -n "$ADDRESS_TEMP" ]; then
-                    ADDRESS=$ADDRESS_TEMP
+                if [[ $TRIMMED_PART == https://* ]]; then
+                  if [[ $TRIMMED_PART == *💬* ]]; then
+                    WAURL=$TRIMMED_PART
+                  elif [[ $TRIMMED_PART == *📞* ]]; then
+                    PHURL=$TRIMMED_PART
+                  fi
+                elif [[ $TRIMMED_PART =~ ^[0-9[:space:]]+$ ]]; then
+                  PHONE=$TRIMMED_PART
+                elif [[ $TRIMMED_PART =~ [A-Z] ]]; then
+                  NAME=$TRIMMED_PART
                 else
-                    FILTER=$TRIMMED_PART
+                    # Attempt to extract address
+                    ADDRESS_TEMP=$(extract_address_from_clients "$LINE")
+                    if [ -n "$ADDRESS_TEMP" ]; then
+                        ADDRESS=$ADDRESS_TEMP
+                    else
+                        FILTER=$TRIMMED_PART
+                    fi
                 fi
-              fi
             done
 
             NEW_PHONE_NAME="${PHONE} (${NAME})"
@@ -431,7 +431,7 @@ jobs:
             CLIENT_LINE=$(echo "$client_line" | awk -F'|' '{print $1,$2,$3,$4,$5,$6}' | xargs)
             CLIENT_NUM=$(echo "$client_line" | awk -F'|' '{print $NF}' | xargs)
             process_client "$CLIENT_LINE" "$CLIENT_NUM"
-          done <<< "${{ env.client_data }}"          
+          done <<< "${{ env.client_data }}"
 
       - name: Commit and push changes
         run: |
