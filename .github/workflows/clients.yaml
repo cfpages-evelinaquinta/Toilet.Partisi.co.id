@@ -1,4 +1,4 @@
-name: Update Multiple Clients v.9.02
+name: Update Multiple Clients v.9.04
 
 on:
   push:
@@ -142,7 +142,7 @@ jobs:
           
           CLIENT_DATA=""
           CLIENT_NUM=1
-
+          
           while IFS= read -r LINE; do
             WAURL=""
             PHURL=""
@@ -150,7 +150,6 @@ jobs:
             PHONE=""
             FILTER=""
             ADDRESS=""
-            
              IFS='|' read -ra PARTS <<< "$LINE"
             
             for PART in "${PARTS[@]}"; do
@@ -161,21 +160,25 @@ jobs:
                 elif [[ $TRIMMED_PART == *📞* ]]; then
                   PHURL=$TRIMMED_PART
                 fi
-                elif [[ $TRIMMED_PART =~ ^[0-9[:space:]]+$ ]]; then
-                    PHONE=$TRIMMED_PART
-                elif [[ $TRIMMED_PART =~ [A-Z] ]]; then
-                    NAME=$TRIMMED_PART
-                else
-                    ADDRESS_TEMP=$(extract_address_from_clients "$LINE")
+              elif [[ $TRIMMED_PART =~ ^[0-9[:space:]]+$ ]]; then
+                PHONE=$TRIMMED_PART
+              elif [[ $TRIMMED_PART =~ [A-Z] ]]; then
+                 if [[ -z "$NAME" ]]; then
+                      NAME=$TRIMMED_PART
+                  fi
+              else
+                  ADDRESS_TEMP=$(extract_address_from_clients "$LINE")
                     if [ -n "$ADDRESS_TEMP" ]; then
                         ADDRESS=$ADDRESS_TEMP
                     else
-                        FILTER=$TRIMMED_PART
+                        if [ -z "$FILTER" ]; then
+                             FILTER=$TRIMMED_PART
+                        fi
                     fi
                 fi
             done
-              CLIENT_DATA="$CLIENT_DATA"$"$WAURL|$PHURL|$NAME|$PHONE|$FILTER|$ADDRESS|$CLIENT_NUM\n"
-              ((CLIENT_NUM++))
+           CLIENT_DATA="$CLIENT_DATA"$"$WAURL|$PHURL|$NAME|$PHONE|$FILTER|$ADDRESS|$CLIENT_NUM\n"
+             ((CLIENT_NUM++))
           done < .clients
           
           echo "client_data<<EOF" >> $GITHUB_ENV
@@ -358,7 +361,7 @@ jobs:
               OLD_ADDRESS=$(extract_address_from_html "$(<"$file")")
               echo "  Old Address: $OLD_ADDRESS"
 
-              if [ -z "$OLD_PHONE_NAME" ] || [ -z "$OLD_WAURL" ] || [ -z "$OLD_PHURL" ]; then
+             if [ -z "$OLD_PHONE_NAME" ] || [ -z "$OLD_WAURL" ] || [ -z "$OLD_PHURL" ]; then
                 echo "Error: Unable to extract one or more of the following from $file:"
                 [ -z "$OLD_PHONE_NAME" ] && echo "- Old Phone Name"
                 [ -z "$OLD_WAURL" ] && echo "- Old WhatsApp/SMS URL"
@@ -419,10 +422,12 @@ jobs:
 
             echo "----------------------------------------"
           }
-          
-          while IFS= read -r client_line; do
-            process_client "$client_line"
-          done <<< "${{ env.client_data }}"
+
+          # Process clients with filters first, then those without filters
+           while IFS= read -r client_line; do
+             CLIENT_NUM=$(echo "$client_line" | awk -F'|' '{print $NF}' | xargs)
+             process_client "$client_line" "$CLIENT_NUM"
+           done <<< "${{ env.client_data }}"
 
       - name: Commit and push changes
         run: |
