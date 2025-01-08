@@ -1,4 +1,4 @@
-name: Update Multiple Clients v.8.43
+name: Update Multiple Clients v.8.44
 
 on:
   push:
@@ -87,25 +87,29 @@ jobs:
             local pattern="$1"
             local filter="$2"  # Pass the original filter to check for negative matches
             local matching_files=""
+            local files_to_filter
 
             # First, find files matching the positive pattern
             if [ -n "$pattern" ]; then
-                matching_files=$(find . -type f -name "*.html" | grep -Ei "$pattern" || true)
+                files_to_filter=$(find . -type f -name "*.html" | grep -Ei "$pattern" || true)
             else
-                matching_files=$(find . -type f -name "*.html")
+                files_to_filter=$(find . -type f -name "*.html")
             fi
 
-            # Check if there are negative matches in the filter
-            if [[ "$filter" == *-* ]]; then
-                # Extract negative matches (e.g., -masin)
-                IFS=',' read -ra FILTER_PARTS <<< "$filter"
-                for part in "${FILTER_PARTS[@]}"; do
-                    if [[ "$part" == -* ]]; then
-                        # Exclude files containing the negative match (e.g., masin)
-                        negative_match="${part:1}"  # Remove the '-' prefix
-                        matching_files=$(echo "$matching_files" | grep -iv "$negative_match" || true)
-                    fi
-                done
+            if [ -n "$files_to_filter" ]; then
+                matching_files="$files_to_filter"
+                # Check if there are negative matches in the filter
+                if [[ "$filter" == *-* ]]; then
+                  # Extract negative matches (e.g., -masin)
+                  IFS=',' read -ra FILTER_PARTS <<< "$filter"
+                  for part in "${FILTER_PARTS[@]}"; do
+                      if [[ "$part" == -* ]]; then
+                          # Exclude files containing the negative match (e.g., masin)
+                          negative_match="${part:1}"  # Remove the '-' prefix
+                          matching_files=$(echo "$matching_files" | grep -iv "$negative_match" || true)
+                      fi
+                  done
+                fi
             fi
 
             # Remove duplicate files and empty lines
@@ -167,7 +171,7 @@ jobs:
               FILTER_PATTERN=$(create_grep_pattern "$FILTER")
               echo "Generated FILTER_PATTERN:"
               echo "$FILTER_PATTERN"
-              FILE_LIST=$(find_matching_files "$FILTER_PATTERN")
+              FILE_LIST=$(find_matching_files "$FILTER_PATTERN" "$FILTER")
             else
               # For clients without filter, exclude files matching other clients' filters
               ALL_FILES=$(find . -type f -name "*.html")
@@ -175,7 +179,7 @@ jobs:
               
               for f in "${!all_filters[@]}"; do
                 EXCLUDE_PATTERN=$(create_grep_pattern "$f")
-                EXCLUDE_FILES=$(find_matching_files "$EXCLUDE_PATTERN")
+                EXCLUDE_FILES=$(find_matching_files "$EXCLUDE_PATTERN" "$f")
                 if [ -n "$EXCLUDE_FILES" ]; then
                   FILE_LIST=$(comm -23 <(echo "$FILE_LIST" | sort) <(echo "$EXCLUDE_FILES" | sort))
                 fi
