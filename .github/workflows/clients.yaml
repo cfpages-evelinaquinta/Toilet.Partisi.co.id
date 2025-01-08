@@ -1,4 +1,4 @@
-name: Update Multiple Clients v.8.44
+name: Update Multiple Clients v.8.45
 
 on:
   push:
@@ -95,20 +95,32 @@ jobs:
             else
                 files_to_filter=$(find . -type f -name "*.html")
             fi
+            
+            if [ -z "$files_to_filter" ]; then
+                echo ""
+                return
+            fi
 
-            if [ -n "$files_to_filter" ]; then
-                matching_files="$files_to_filter"
-                # Check if there are negative matches in the filter
-                if [[ "$filter" == *-* ]]; then
-                  # Extract negative matches (e.g., -masin)
-                  IFS=',' read -ra FILTER_PARTS <<< "$filter"
-                  for part in "${FILTER_PARTS[@]}"; do
-                      if [[ "$part" == -* ]]; then
-                          # Exclude files containing the negative match (e.g., masin)
-                          negative_match="${part:1}"  # Remove the '-' prefix
-                          matching_files=$(echo "$matching_files" | grep -iv "$negative_match" || true)
-                      fi
-                  done
+            matching_files="$files_to_filter"
+
+            # Check if there are negative matches in the filter
+            if [[ "$filter" == *-* ]]; then
+              # Create a combined grep expression for negative matches
+                local negative_patterns=""
+                IFS=',' read -ra FILTER_PARTS <<< "$filter"
+                for part in "${FILTER_PARTS[@]}"; do
+                    if [[ "$part" == -* ]]; then
+                        negative_match="${part:1}"
+                        if [ -n "$negative_patterns" ]; then
+                            negative_patterns="$negative_patterns|$negative_match"
+                        else
+                            negative_patterns="$negative_match"
+                        fi
+                    fi
+                done
+
+                if [ -n "$negative_patterns" ]; then
+                  matching_files=$(echo "$matching_files" | grep -ivE "$negative_patterns" || true)
                 fi
             fi
 
