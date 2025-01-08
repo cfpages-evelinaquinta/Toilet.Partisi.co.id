@@ -1,4 +1,4 @@
-name: Update Multiple Clients v.9.06
+name: Update Multiple Clients v.9.07
 
 on:
   push:
@@ -35,7 +35,7 @@ jobs:
         if: env.exists == 'true'
         id: identify_clients
         run: |
-           # Function to escape special characters for sed
+          # Function to escape special characters for sed
           escape_for_sed() {
             echo "$1" | sed -e 's/[\/&]/\\&/g'
           }
@@ -100,7 +100,7 @@ jobs:
           done < .clients
           
           echo "client_data<<EOF" >> $GITHUB_ENV
-          echo "$CLIENT_DATA" >> $GITHUB_ENV
+          echo "${CLIENT_DATA}" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
 
       - name: Process Replace Clients
