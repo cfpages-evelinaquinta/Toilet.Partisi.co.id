@@ -1,4 +1,4 @@
-name: Update Multiple Clients v.9.05
+name: Update Multiple Clients v.9.06
 
 on:
   push:
@@ -35,6 +35,10 @@ jobs:
         if: env.exists == 'true'
         id: identify_clients
         run: |
+           # Function to escape special characters for sed
+          escape_for_sed() {
+            echo "$1" | sed -e 's/[\/&]/\\&/g'
+          }
           # Regex for extracting address from .clients
           extract_address_from_clients() {
             local input="$1"
@@ -83,6 +87,14 @@ jobs:
                     fi
                 fi
             done
+           echo "Processing Client $CLIENT_NUM ($NAME):"
+           echo "WAURL: $WAURL"
+           echo "PHURL: $PHURL"
+           echo "NAME: $NAME"
+           echo "PHONE: $PHONE"
+           echo "FILTER: $FILTER"
+           echo "ADDRESS: $ADDRESS"
+            
            CLIENT_DATA="$CLIENT_DATA"$"$WAURL|$PHURL|$NAME|$PHONE|$FILTER|$ADDRESS|$CLIENT_NUM\n"
              ((CLIENT_NUM++))
           done < .clients
@@ -221,14 +233,8 @@ jobs:
             ADDRESS="${PARTS[5]}"
             
             NEW_PHONE_NAME="${PHONE} (${NAME})"
-
-            echo "Processing Client $CLIENT_NUM ($NAME):"
-            echo "WAURL: $WAURL"
-            echo "PHURL: $PHURL"
-            echo "NAME: $NAME"
-            echo "PHONE: $PHONE"
-            echo "FILTER: $FILTER"
-            echo "ADDRESS: $ADDRESS"
+            
+            echo "Processing Client ($NAME):"
 
             # Handle file selection based on FILTER
             if [ -n "$FILTER" ]; then
@@ -252,7 +258,7 @@ jobs:
 
             # Check if FILE_LIST is empty
             if [ -z "$FILE_LIST" ]; then
-              echo "No matching files found for Client $CLIENT_NUM ($NAME)"
+              echo "No matching files found for Client  ($NAME)"
               return
             fi
 
@@ -410,14 +416,14 @@ jobs:
             done <<< "$FILE_LIST"
 
             if [ "$CHANGES_MADE" = true ]; then
-              echo "Changes were made for Client $CLIENT_NUM ($NAME)"
+              echo "Changes were made for Client  ($NAME)"
             else
-              echo "No changes were necessary for Client $CLIENT_NUM ($NAME)"
+              echo "No changes were necessary for Client  ($NAME)"
             fi
 
             echo "----------------------------------------"
           }
-
+          
            while IFS= read -r client_line; do
              CLIENT_NUM=$(echo "$client_line" | awk -F'|' '{print $NF}' | xargs)
              process_client "$client_line" "$CLIENT_NUM"
