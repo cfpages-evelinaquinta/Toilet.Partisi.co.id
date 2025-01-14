@@ -1,4 +1,4 @@
-name: Update Multiple Clients v.9.08
+name: Update Multiple Clients v.9.09
 
 on:
   push:
@@ -154,7 +154,6 @@ jobs:
                     fi
                 done
             fi
-            
             echo "$pattern"
           }
 
@@ -428,7 +427,7 @@ jobs:
             echo "----------------------------------------"
           }
           
-           while IFS= read -r client_line; do
+           while read -r client_line; do
              CLIENT_NUM=$(echo "$client_line" | awk -F'|' '{print $NF}' | xargs)
              process_client "$client_line" "$CLIENT_NUM"
            done <<< "${{ env.client_data }}"
