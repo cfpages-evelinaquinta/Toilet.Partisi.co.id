@@ -1,4 +1,4 @@
-name: Update Multiple Clients v.9.10
+name: Update Multiple Clients v.9.11
 
 on:
   push:
@@ -42,8 +42,8 @@ jobs:
           # Regex for extracting address from .clients
           extract_address_from_clients() {
             local input="$1"
-            # Check if the input contains a dot, comma, and a number
-            if [[ "$input" =~ \.[0-9] ]] && [[ "$input" =~ \, ]]; then
+            # Heuristic approach: if it contains a combination of letters, numbers, and common address separators
+            if [[ "$input" =~ [a-zA-Z] ]] && [[ "$input" =~ [0-9] ]] && [[ "$input" =~ [\.,/] ]]; then
               echo "$input"
             else
               echo ""
@@ -95,7 +95,7 @@ jobs:
            echo "FILTER: $FILTER"
            echo "ADDRESS: $ADDRESS"
 
-           CLIENT_DATA="$CLIENT_DATA"$"$WAURL|$PHURL|$NAME|$PHONE|$FILTER|$ADDRESS|$CLIENT_NUM\n"
+           CLIENT_DATA="$CLIENT_DATA"$"$WAURL|$PHURL|$NAME|$PHONE|$FILTER|$ADDRESS\n"
              ((CLIENT_NUM++))
           done < .clients
 
@@ -216,7 +216,6 @@ jobs:
           # Function to process a single client
           process_client() {
             local LINE="$1"
-            local CLIENT_NUM="$2"
 
             WAURL=""
             PHURL=""
@@ -436,8 +435,7 @@ jobs:
           }
 
            while IFS= read -r client_line; do
-             CLIENT_NUM=$(echo "$client_line" | awk -F'|' '{print $NF}' | xargs)
-             process_client "$client_line" "$CLIENT_NUM"
+             process_client "$client_line"
            done <<< "${{ env.client_data }}"
 
       - name: Commit and push changes
