@@ -1,4 +1,4 @@
-name: Update Multiple Clients v.10.2
+name: Update Multiple Clients v10.3
 
 on:
   push:
@@ -54,7 +54,7 @@ jobs:
     needs: identify_clients
     runs-on: ubuntu-latest
     name: Process Clients
-    if: needs.identify_clients.result.success && needs.identify_clients.outputs.client_data != ''
+    if: needs.identify_clients.result.success && fromJson(needs.identify_clients.outputs.client_data) != null
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
