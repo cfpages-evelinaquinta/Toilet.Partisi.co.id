@@ -1,4 +1,4 @@
-name: Update Multiple Clients v.10.1
+name: Update Multiple Clients v.10.2
 
 on:
   push:
@@ -20,21 +20,29 @@ jobs:
 
       - name: Check if .clients file exists
         id: check_clients
-        run: if [[ -f .clients ]]; then echo "exists=true" >> $GITHUB_ENV; else echo "exists=false" >> $GITHUB_ENV; fi
-
-      - name: Abort if .clients file does not exist
-        if: env.exists == 'false'
-        run: echo "No .clients file found, aborting operation." && exit 1
+        run: |
+          if [[ -f .clients ]]; then
+            echo "exists=true" >> $GITHUB_ENV
+          else
+            echo "exists=false" >> $GITHUB_ENV
+            echo "client_data=" >> $GITHUB_OUTPUT
+            exit 0
+          fi
 
       - name: Check if .clients file is empty
         if: env.exists == 'true'
+        id: check_empty
         run: |
           if [[ ! -s .clients ]]; then
-            echo "File is empty, nothing to do." && exit 0
+            echo "empty=true" >> $GITHUB_ENV
+            echo "client_data=" >> $GITHUB_OUTPUT
+            exit 0
+          else
+            echo "empty=false" >> $GITHUB_ENV
           fi
 
       - name: Identify Clients and their data
-        if: env.exists == 'true'
+        if: env.exists == 'true' && env.empty == 'false'
         id: identify
         run: |
           CLIENT_DATA=$(cat .clients)
@@ -46,7 +54,7 @@ jobs:
     needs: identify_clients
     runs-on: ubuntu-latest
     name: Process Clients
-    if: needs.identify_clients.result.success
+    if: needs.identify_clients.result.success && needs.identify_clients.outputs.client_data != ''
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
