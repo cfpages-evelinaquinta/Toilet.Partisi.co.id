@@ -1,4 +1,4 @@
-name: Update Multiple Clients v.10.02
+name: Update Multiple Clients v.10.03
 
 on:
   push:
@@ -25,17 +25,22 @@ jobs:
       - name: Check and Parse .clients file
         id: parse_clients_file
         run: |
-          if [[ ! -f .clients ]]; then
+          FILE_EXISTS="false" # Initialize FILE_EXISTS to false
+          if [[ -f .clients ]]; then
+            if [[ -s .clients ]]; then
+              FILE_EXISTS="true" # Set to true only if file exists AND is not empty
+            else
+              echo "File .clients is empty, nothing to do."
+              echo "File .clients is empty, nothing to do." # More informative message
+              exit 0
+            fi
+          else
             echo "No .clients file found, aborting operation."
             exit 1
           fi
-          if [[ ! -s .clients ]]; then
-            echo "File is empty, nothing to do."
-            echo "File .clients is empty, nothing to do." # More informative message
-            exit 0
-          fi
 
-          echo "file_exists=true" >> $GITHUB_ENV # Correctly set env.exists for future steps
+          echo "::set-output name=file_exists_output::$FILE_EXISTS" # Set step output 'file_exists_output'
+
           CLIENT_DATA_JSON="["
           FIRST_CLIENT=true
           echo "Clients found in .clients file:" # Start of user information output
@@ -87,12 +92,16 @@ jobs:
           CLIENT_DATA_JSON+="]"
           echo "End of client list." # End of user information output
 
-          echo "client_data_json=$CLIENT_DATA_JSON" >> $GITHUB_ENV # Export parsed JSON data
+          echo "::set-output name=client_data_json_output::$CLIENT_DATA_JSON" # Set step output 'client_data_json_output'
 
-      - name: Debug - Print Environment Variables
-        if: env.exists == 'true' # Still use the condition to check if it even enters here
+      - name: Set env.exists from step output
+        if: steps.parse_clients_file.outputs.file_exists_output == 'true'
+        run: echo "exists=true" >> $GITHUB_ENV
+
+      - name: Debug - Print Environment Variables (Again)
+        if: env.exists == 'true'
         run: |
-          echo "Environment Variables:"
+          echo "Environment Variables (after setting from step output):"
           env
 
       - name: Process Replace Clients
@@ -454,7 +463,7 @@ jobs:
            done
 
       - name: Commit and push changes
-        if: env.exists == 'true' && inputs.dry_run != 'true' # Skip commit in dry run
+        if: env.exists == 'true' && inputs.dry_run != 'true'
         run: |
           git config --global user.name 'github-actions[bot]'
           git config --global user.email '41898282+github-actions[bot]@users.noreply.github.com'
