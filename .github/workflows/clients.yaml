@@ -1,4 +1,4 @@
-name: Update Multiple Clients v.10.04
+name: Update Multiple Clients v.10.05
 
 on:
   push:
@@ -241,11 +241,9 @@ jobs:
 
               declare -A all_filters
               CLIENTS_JSON="${{ env.client_data_json }}"
+              echo "DEBUG: CLIENTS_JSON: $CLIENTS_JSON" # Add a debug print to verify
               jq -c '.[]' <<< "$CLIENTS_JSON" | while read client; do
-                  other_filter=$(echo "$client" | jq -r .FILTER)
-                  if [ -n "$other_filter" ]; then
-                      all_filters["$other_filter"]=1
-                  fi
+                process_client "$client"
               done
 
               echo "Filters from other clients: ${!all_filters[@]}" # Log filters from other clients
