@@ -1,4 +1,4 @@
-name: Update Multiple Clients v.10.00
+name: Update Multiple Clients v.10.01
 
 on:
   push:
@@ -25,11 +25,15 @@ jobs:
           fi
           if [[ ! -s .clients ]]; then
             echo "File is empty, nothing to do."
+            echo "File .clients is empty, nothing to do." # More informative message
             exit 0
           fi
 
+          echo "file_exists=true" >> $GITHUB_ENV # Correctly set env.exists for future steps
           CLIENT_DATA_JSON="["
           FIRST_CLIENT=true
+          echo "Clients found in .clients file:" # Start of user information output
+          CLIENT_NUM=1
           while IFS= read -r LINE; do
             if ! $FIRST_CLIENT; then
               CLIENT_DATA_JSON+=","
@@ -64,13 +68,20 @@ jobs:
             done
 
             CLIENT_DATA_JSON+="{ \"WAURL\": \"$(jq -sRr @json <<<"$WAURL")\", \"PHURL\": \"$(jq -sRr @json <<<"$PHURL")\", \"NAME\": \"$(jq -sRr @json <<<"$NAME")\", \"PHONE\": \"$(jq -sRr @json <<<"$PHONE")\", \"FILTER\": \"$(jq -sRr @json <<<"$FILTER")\", \"ADDRESS\": \"$(jq -sRr @json <<<"$ADDRESS")\" }"
+
+            echo "  Client $CLIENT_NUM:" # Output client information to logs
+            echo "    Name: $NAME"
+            echo "    Phone: $PHONE"
+            echo "    WhatsApp URL: $WAURL"
+            echo "    Phone URL: $PHURL"
+            echo "    Filter: $FILTER"
+            echo "    Address: $ADDRESS"
+            CLIENT_NUM=$((CLIENT_NUM + 1))
           done < .clients
           CLIENT_DATA_JSON+="]"
+          echo "End of client list." # End of user information output
 
-          echo "client_data_json=$CLIENT_DATA_JSON" >> $GITHUB_ENV
-          echo "file_exists=true" >> $GITHUB_ENV
-        env:
-          exists: true # Default, overwritten if checks pass
+          echo "client_data_json=$CLIENT_DATA_JSON" >> $GITHUB_ENV # Export parsed JSON data
 
       - name: Process Replace Clients
         if: env.exists == 'true'
