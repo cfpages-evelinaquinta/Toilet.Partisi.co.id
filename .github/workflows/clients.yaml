@@ -1,10 +1,16 @@
-name: Update Multiple Clients v.10.01
+name: Update Multiple Clients v.10.02
 
 on:
   push:
     paths:
       - .clients
   workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Perform Real Run? (Uncheck for Dry Run, Check for Real Run)' # Improved label, now indicates unchecking for dry run
+        required: false
+        default: true # Default to dry run for manual dispatch (safer default)
+        type: boolean
 
 permissions:
   contents: write
@@ -82,6 +88,12 @@ jobs:
           echo "End of client list." # End of user information output
 
           echo "client_data_json=$CLIENT_DATA_JSON" >> $GITHUB_ENV # Export parsed JSON data
+
+      - name: Debug - Print Environment Variables
+        if: env.exists == 'true' # Still use the condition to check if it even enters here
+        run: |
+          echo "Environment Variables:"
+          env
 
       - name: Process Replace Clients
         if: env.exists == 'true'
@@ -191,6 +203,7 @@ jobs:
           # Function to process a single client (now accepts parsed client data)
           process_client() {
             local client_data="$1" # Expecting a JSON object string
+            DRY_RUN="${{ inputs.dry_run }}" # Get dry_run input
 
             # Parse JSON data
             WAURL=$(echo "$client_data" | jq -r .WAURL)
@@ -382,28 +395,45 @@ jobs:
                 OLD_ADDRESS_ESCAPED=$(escape_for_sed "$OLD_ADDRESS")
                 NEW_ADDRESS_ESCAPED=$(escape_for_sed "$ADDRESS")
 
-                # Perform replacements
-                if [ -n "$OLD_PHONE_NAME" ] && [ -n "$NEW_PHONE_NAME" ]; then
+                # Perform replacements - DRY RUN CONDITIONAL
+                if [[ "$DRY_RUN" == "true" ]]; then
+                  echo "Dry Run - Would update file: $file"
+                  if [ -n "$OLD_PHONE_NAME" ] && [ -n "$NEW_PHONE_NAME" ]; then
+                    echo "  Dry Run - sed s|$OLD_PHONE_NAME_ESCAPED|$NEW_PHONE_NAME_ESCAPED|g \"$file\""
+                    sed "s|$OLD_PHONE_NAME_ESCAPED|$NEW_PHONE_NAME_ESCAPED|g" "$file" > /dev/null # Redirect output in dry run
+                  fi
+                  if [ -n "$OLD_WAURL" ] && [ -n "$WAURL" ]; then
+                    echo "  Dry Run - sed s|href=\"$OLD_WAURL_ESCAPED\"|href=\"$NEW_WAURL_ESCAPED\"|g \"$file\""
+                    sed "s|href=\"$OLD_WAURL_ESCAPED\"|href=\"$NEW_WAURL_ESCAPED\"|g" "$file" > /dev/null
+                  fi
+                  if [ -n "$OLD_PHURL" ] && [ -n "$PHURL" ]; then
+                    echo "  Dry Run - sed s|href=\"$OLD_PHURL_ESCAPED\"|href=\"$NEW_PHURL_ESCAPED\"|g \"$file\""
+                    sed "s|href=\"$OLD_PHURL_ESCAPED\"|href=\"$NEW_PHURL_ESCAPED\"|g" "$file" > /dev/null
+                  fi
+                  if [ -n "$OLD_PHONE" ] && [ -n "$PHONE" ]; then
+                    echo "  Dry Run - sed s|$OLD_PHONE_ESCAPED|$NEW_PHONE_ESCAPED|g \"$file\""
+                    sed "s|$OLD_PHONE_ESCAPED|$NEW_PHONE_ESCAPED|g" "$file" > /dev/null
+                  fi
+                  if [ -n "$OLD_NAME" ] && [ -n "$NAME" ]; then
+                    echo "  Dry Run - sed s|$OLD_NAME_ESCAPED|$NEW_NAME_ESCAPED|g \"$file\""
+                    sed "s|$OLD_NAME_ESCAPED|$NEW_NAME_ESCAPED|g" "$file" > /dev/null
+                  fi
+                  if [ -n "$OLD_ADDRESS" ] && [ -n "$ADDRESS" ]; then
+                    echo "  Dry Run - sed s|$OLD_ADDRESS_ESCAPED|$NEW_ADDRESS_ESCAPED|g \"$file\""
+                    sed "s|$OLD_ADDRESS_ESCAPED|$NEW_ADDRESS_ESCAPED|g" "$file" > /dev/null
+                  fi
+                else # Real run - execute sed -i to modify files
                   sed -i "s|$OLD_PHONE_NAME_ESCAPED|$NEW_PHONE_NAME_ESCAPED|g" "$file"
-                fi
-                if [ -n "$OLD_WAURL" ] && [ -n "$WAURL" ]; then
                   sed -i "s|href=\"$OLD_WAURL_ESCAPED\"|href=\"$NEW_WAURL_ESCAPED\"|g" "$file"
-                fi
-                if [ -n "$OLD_PHURL" ] && [ -n "$PHURL" ]; then
                   sed -i "s|href=\"$OLD_PHURL_ESCAPED\"|href=\"$NEW_PHURL_ESCAPED\"|g" "$file"
-                fi
-                if [ -n "$OLD_PHONE" ] && [ -n "$PHONE" ]; then
                   sed -i "s|$OLD_PHONE_ESCAPED|$NEW_PHONE_ESCAPED|g" "$file"
-                fi
-                if [ -n "$OLD_NAME" ] && [ -n "$NAME" ]; then
                   sed -i "s|$OLD_NAME_ESCAPED|$NEW_NAME_ESCAPED|g" "$file"
-                fi
-                if [ -n "$OLD_ADDRESS" ] && [ -n "$ADDRESS" ]; then
                   sed -i "s|$OLD_ADDRESS_ESCAPED|$NEW_ADDRESS_ESCAPED|g" "$file"
+                  echo "Updated file: $file"
                 fi
 
+
                 CHANGES_MADE=true
-                echo "Updated file: $file"
               else
                 echo "No changes needed for file: $file"
               fi
@@ -424,7 +454,7 @@ jobs:
            done
 
       - name: Commit and push changes
-        if: env.exists == 'true'
+        if: env.exists == 'true' && inputs.dry_run != 'true' # Skip commit in dry run
         run: |
           git config --global user.name 'github-actions[bot]'
           git config --global user.email '41898282+github-actions[bot]@users.noreply.github.com'
