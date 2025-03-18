@@ -1,4 +1,4 @@
-name: Update Multiple Clients v.10.03
+name: Update Multiple Clients v.10.04
 
 on:
   push:
@@ -80,13 +80,13 @@ jobs:
 
             CLIENT_DATA_JSON+="{ \"WAURL\": \"$(jq -sRr @json <<<"$WAURL")\", \"PHURL\": \"$(jq -sRr @json <<<"$PHURL")\", \"NAME\": \"$(jq -sRr @json <<<"$NAME")\", \"PHONE\": \"$(jq -sRr @json <<<"$PHONE")\", \"FILTER\": \"$(jq -sRr @json <<<"$FILTER")\", \"ADDRESS\": \"$(jq -sRr @json <<<"$ADDRESS")\" }"
 
-            echo "  Client $CLIENT_NUM:" # Output client information to logs
-            echo "    Name: $NAME"
-            echo "    Phone: $PHONE"
-            echo "    WhatsApp URL: $WAURL"
-            echo "    Phone URL: $PHURL"
-            echo "    Filter: $FILTER"
-            echo "    Address: $ADDRESS"
+            echo "Client $CLIENT_NUM:" # Output client information to logs
+            echo "Name: $NAME"
+            echo "Phone: $PHONE"
+            echo "WhatsApp URL: $WAURL"
+            echo "Phone URL: $PHURL"
+            echo "Filter: $FILTER"
+            echo "Address: $ADDRESS"
             CLIENT_NUM=$((CLIENT_NUM + 1))
           done < .clients
           CLIENT_DATA_JSON+="]"
@@ -160,7 +160,7 @@ jobs:
           # Function to find files matching pattern
           find_matching_files() {
             local pattern="$1"
-            local filter="$2"  # Pass the original filter to check for negative matches
+            local filter="$2" # Pass the original filter to check for negative matches
             local matching_files=""
             local files_to_filter
 
@@ -222,18 +222,19 @@ jobs:
             FILTER=$(echo "$client_data" | jq -r .FILTER)
             ADDRESS=$(echo "$client_data" | jq -r .ADDRESS)
 
-
             NEW_PHONE_NAME="${PHONE} (${NAME})"
 
-            echo "Processing Client ($NAME):"
+            echo "Processing Client: ($NAME)" # Log client name at start
+            echo "Client Data (from .clients):"
+            echo "Name: $NAME, Phone: $PHONE, WAURL: $WAURL, PHURL: $PHURL, Filter: $FILTER, Address: $ADDRESS"
 
             # Handle file selection based on FILTER
             if [ -n "$FILTER" ]; then
               FILTER_PATTERN=$(create_grep_pattern "$FILTER")
-              echo "Generated FILTER_PATTERN:"
-              echo "$FILTER_PATTERN"
+              echo "Generated FILTER_PATTERN: '$FILTER_PATTERN'" # Log generated filter pattern
               FILE_LIST=$(find_matching_files "$FILTER_PATTERN" "$FILTER")
             else
+              echo "No Filter for this client, processing all HTML files initially."
               # For clients without filter, exclude files matching other clients' filters
               ALL_FILES=$(find . -type f -name "*.html")
               FILE_LIST="$ALL_FILES"
@@ -247,6 +248,8 @@ jobs:
                   fi
               done
 
+              echo "Filters from other clients: ${!all_filters[@]}" # Log filters from other clients
+
               for f in "${!all_filters[@]}"; do
                 EXCLUDE_PATTERN=$(create_grep_pattern "$f")
                 EXCLUDE_FILES=$(find_matching_files "$EXCLUDE_PATTERN" "$f")
@@ -256,16 +259,20 @@ jobs:
               done
             fi
 
+            echo "FILE_LIST (before processing):" # Log the initial file list
+            echo "$FILE_LIST"
+
             # Check if FILE_LIST is empty
             if [ -z "$FILE_LIST" ]; then
-              echo "No matching files found for Client  ($NAME)"
+              echo "No matching files found for Client ($NAME), skipping."
+              echo "----------------------------------------"
               return
             fi
 
             # Update files
             CHANGES_MADE=false
             while IFS= read -r file; do
-              echo "Processing file: $file"
+              echo "Processing file: $file" # Log each file being processed
 
               # Extract all necessary information
               OLD_PHONE_NAME=$(awk -F'[<>]' '
@@ -283,7 +290,7 @@ jobs:
               if [ -z "$OLD_PHONE_NAME" ]; then
                 OLD_PHONE_NAME=$(awk -F'[<>]' '/<span[^>]*>[0-9]{4} [0-9]{4} [0-9]{4}.*\([^)]+\)/ {match($0, /[0-9]{4} [0-9]{4} [0-9]{4}.*\([^)]+\)/, arr); print arr[0]; exit}' "$file" || true) # Added || true to prevent exit on no match
               fi
-              echo "  Old Phone Name: $OLD_PHONE_NAME"
+              echo "Old Phone Name (extracted): '$OLD_PHONE_NAME'" # Log extracted old phone name
 
               # Initialize OLD_PHONE and OLD_NAME
               OLD_PHONE=""
@@ -297,10 +304,10 @@ jobs:
                 # Extract name (remove phone number and parentheses)
                 OLD_NAME=$(echo "$OLD_PHONE_NAME" | sed 's/[0-9 ]\+//g' | sed 's/[()]//g' | xargs || true) # Added || true to prevent exit on no match
               else
-                echo "Warning: OLD_PHONE_NAME is empty"
+                echo "Warning: OLD_PHONE_NAME is empty" # Log warning if old phone name is empty
               fi
-              echo "  Old Phone: $OLD_PHONE"
-              echo "  Old Name: $OLD_NAME"
+              echo "Old Phone (extracted): '$OLD_PHONE'" # Log extracted old phone
+              echo "Old Name (extracted): '$OLD_NAME'" # Log extracted old name
 
               OLD_WAURL=$(awk '
               /<div[^>]*class="[^"]*(whatsapp-floating|sms-floating)[^"]*"/ {
@@ -322,7 +329,7 @@ jobs:
                     exit
                   }' "$file" || true) # Added || true to prevent exit on no match
               fi
-              echo "  Old WA/SMS URL: $OLD_WAURL"
+              echo "Old WA/SMS URL (extracted): '$OLD_WAURL'" # Log extracted old wa url
 
               # Extracting phone url
               OLD_PHURL=$(awk '
@@ -356,40 +363,41 @@ jobs:
                     exit
                   }' "$file" || true) # Added || true to prevent exit on no match
               fi
-              echo "  Old Phone URL: $OLD_PHURL"
+              echo "Old Phone URL (extracted): '$OLD_PHURL'" # Log extracted old ph url
 
               OLD_ADDRESS=$([[ -z "$(extract_address_from_html "$(<"$file")")" ]] && echo "" || extract_address_from_html "$(<"$file")") # Modified address extraction to use conditional to avoid empty string issues and added || true in function
-              echo "  Old Address: $OLD_ADDRESS"
+              echo "Old Address (extracted): '$OLD_ADDRESS'" # Log extracted old address
 
               if [ -z "$OLD_PHONE_NAME" ] || [ -z "$OLD_WAURL" ] || [ -z "$OLD_PHURL" ] || [ -z "$OLD_ADDRESS" ]; then
-                echo "Error: Unable to extract one or more of the following from $file:"
+                echo "Error: Unable to extract data from $file:" # More specific error message
                 [ -z "$OLD_PHONE_NAME" ] && echo "- Old Phone Name"
                 [ -z "$OLD_WAURL" ] && echo "- Old WhatsApp/SMS URL"
                 [ -z "$OLD_PHURL" ] && echo "- Old Phone URL"
                 [ -z "$OLD_ADDRESS" ] && echo "- Old Address"
-                echo "Please check the HTML structure and update the extraction logic if necessary. Skipping operation for this file and moving to the next."
+                echo "Skipping operation for this file and moving to the next."
                 continue
               fi
 
               # --- ADDED VARIABLE PRINTING ---
               echo "--- Variable Values Before Comparison ---"
-              echo "OLD_PHONE_NAME: $OLD_PHONE_NAME"
-              echo "NEW_PHONE_NAME: $NEW_PHONE_NAME"
-              echo "OLD_PHONE: $OLD_PHONE"
-              echo "PHONE: $PHONE"
-              echo "OLD_NAME: $OLD_NAME"
-              echo "NAME: $NAME"
-              echo "OLD_WAURL: $OLD_WAURL"
-              echo "WAURL: $WAURL"
-              echo "OLD_PHURL: $OLD_PHURL"
-              echo "PHURL: $PHURL"
-              echo "OLD_ADDRESS: $OLD_ADDRESS"
-              echo "ADDRESS: $ADDRESS"
+              echo "OLD_PHONE_NAME: '$OLD_PHONE_NAME'"
+              echo "NEW_PHONE_NAME: '$NEW_PHONE_NAME'"
+              echo "OLD_PHONE: '$OLD_PHONE'"
+              echo "PHONE: '$PHONE'"
+              echo "OLD_NAME: '$OLD_NAME'"
+              echo "NAME: '$NAME'"
+              echo "OLD_WAURL: '$OLD_WAURL'"
+              echo "WAURL: '$WAURL'"
+              echo "OLD_PHURL: '$OLD_PHURL'"
+              echo "PHURL: '$PHURL'"
+              echo "OLD_ADDRESS: '$OLD_ADDRESS'"
+              echo "ADDRESS: '$ADDRESS'"
               echo "--- End Variable Values ---"
               # --- END ADDED VARIABLE PRINTING ---
 
               # Compare and update if different
               if [ "$OLD_PHONE_NAME" != "$NEW_PHONE_NAME" ] || [ "$OLD_PHONE" != "$PHONE" ] || [ "$OLD_NAME" != "$NAME" ] || [ "$OLD_WAURL" != "$WAURL" ] || [ "$OLD_PHURL" != "$PHURL" ] || [ "$OLD_ADDRESS" != "$ADDRESS" ]; then
+                echo "Changes DETECTED for file: $file" # Log when changes are detected
                 # Escape special characters for all variables
                 OLD_PHONE_NAME_ESCAPED=$(escape_for_sed "$OLD_PHONE_NAME")
                 NEW_PHONE_NAME_ESCAPED=$(escape_for_sed "$NEW_PHONE_NAME")
@@ -408,53 +416,54 @@ jobs:
                 if [[ "$DRY_RUN" == "true" ]]; then
                   echo "Dry Run - Would update file: $file"
                   if [ -n "$OLD_PHONE_NAME" ] && [ -n "$NEW_PHONE_NAME" ]; then
-                    echo "  Dry Run - sed s|$OLD_PHONE_NAME_ESCAPED|$NEW_PHONE_NAME_ESCAPED|g \"$file\""
+                    echo "Dry Run - sed s|$OLD_PHONE_NAME_ESCAPED|$NEW_PHONE_NAME_ESCAPED|g \"$file\""
                     sed "s|$OLD_PHONE_NAME_ESCAPED|$NEW_PHONE_NAME_ESCAPED|g" "$file" > /dev/null # Redirect output in dry run
                   fi
                   if [ -n "$OLD_WAURL" ] && [ -n "$WAURL" ]; then
-                    echo "  Dry Run - sed s|href=\"$OLD_WAURL_ESCAPED\"|href=\"$NEW_WAURL_ESCAPED\"|g \"$file\""
+                    echo "Dry Run - sed s|href=\"$OLD_WAURL_ESCAPED\"|href=\"$NEW_WAURL_ESCAPED\"|g \"$file\""
                     sed "s|href=\"$OLD_WAURL_ESCAPED\"|href=\"$NEW_WAURL_ESCAPED\"|g" "$file" > /dev/null
                   fi
                   if [ -n "$OLD_PHURL" ] && [ -n "$PHURL" ]; then
-                    echo "  Dry Run - sed s|href=\"$OLD_PHURL_ESCAPED\"|href=\"$NEW_PHURL_ESCAPED\"|g \"$file\""
+                    echo "Dry Run - sed s|href=\"$OLD_PHURL_ESCAPED\"|href=\"$NEW_PHURL_ESCAPED\"|g \"$file\""
                     sed "s|href=\"$OLD_PHURL_ESCAPED\"|href=\"$NEW_PHURL_ESCAPED\"|g" "$file" > /dev/null
                   fi
                   if [ -n "$OLD_PHONE" ] && [ -n "$PHONE" ]; then
-                    echo "  Dry Run - sed s|$OLD_PHONE_ESCAPED|$NEW_PHONE_ESCAPED|g \"$file\""
+                    echo "Dry Run - sed s|$OLD_PHONE_ESCAPED|$NEW_PHONE_ESCAPED|g \"$file\""
                     sed "s|$OLD_PHONE_ESCAPED|$NEW_PHONE_ESCAPED|g" "$file" > /dev/null
                   fi
                   if [ -n "$OLD_NAME" ] && [ -n "$NAME" ]; then
-                    echo "  Dry Run - sed s|$OLD_NAME_ESCAPED|$NEW_NAME_ESCAPED|g \"$file\""
+                    echo "Dry Run - sed s|$OLD_NAME_ESCAPED|$NEW_NAME_ESCAPED|g \"$file\""
                     sed "s|$OLD_NAME_ESCAPED|$NEW_NAME_ESCAPED|g" "$file" > /dev/null
                   fi
                   if [ -n "$OLD_ADDRESS" ] && [ -n "$ADDRESS" ]; then
-                    echo "  Dry Run - sed s|$OLD_ADDRESS_ESCAPED|$NEW_ADDRESS_ESCAPED|g \"$file\""
+                    echo "Dry Run - sed s|$OLD_ADDRESS_ESCAPED|$NEW_ADDRESS_ESCAPED|g \"$file\""
                     sed "s|$OLD_ADDRESS_ESCAPED|$NEW_ADDRESS_ESCAPED|g" "$file" > /dev/null
                   fi
                 else # Real run - execute sed -i to modify files
+                  echo "Real Run - Updating file: $file" # Log before real update
                   sed -i "s|$OLD_PHONE_NAME_ESCAPED|$NEW_PHONE_NAME_ESCAPED|g" "$file"
                   sed -i "s|href=\"$OLD_WAURL_ESCAPED\"|href=\"$NEW_WAURL_ESCAPED\"|g" "$file"
                   sed -i "s|href=\"$OLD_PHURL_ESCAPED\"|href=\"$NEW_PHURL_ESCAPED\"|g" "$file"
                   sed -i "s|$OLD_PHONE_ESCAPED|$NEW_PHONE_ESCAPED|g" "$file"
                   sed -i "s|$OLD_NAME_ESCAPED|$NEW_NAME_ESCAPED|g" "$file"
                   sed -i "s|$OLD_ADDRESS_ESCAPED|$NEW_ADDRESS_ESCAPED|g" "$file"
-                  echo "Updated file: $file"
+                  echo "Updated file: $file" # Log after real update
                 fi
 
 
                 CHANGES_MADE=true
               else
-                echo "No changes needed for file: $file"
+                echo "No changes needed for file: $file" # Log when no changes needed
               fi
             done <<< "$FILE_LIST"
 
             if [ "$CHANGES_MADE" = true ]; then
-              echo "Changes were made for Client  ($NAME)"
+              echo "Changes were made for Client: ($NAME)" # Log changes for client
             else
-              echo "No changes were necessary for Client  ($NAME)"
+              echo "No changes were necessary for Client: ($NAME)" # Log no changes for client
             fi
 
-            echo "----------------------------------------"
+            echo "----------------------------------------" # Separator for clients
           }
 
           CLIENTS_JSON="${{ env.client_data_json }}"
