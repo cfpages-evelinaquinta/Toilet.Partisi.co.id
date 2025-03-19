@@ -1,4 +1,4 @@
-name: Update Multiple Clients v.10.07
+name: Update Multiple Clients v.10.08
 
 on:
   push:
@@ -39,7 +39,7 @@ jobs:
             exit 1
           fi
 
-          echo "file_exists_output=$FILE_EXISTS" >> $GITHUB_OUTPUT # Use GITHUB_OUTPUT - Corrected
+          echo "file_exists_output=$FILE_EXISTS" >> $GITHUB_OUTPUT
 
           CLIENT_DATA_JSON="["
           FIRST_CLIENT=true
@@ -78,7 +78,17 @@ jobs:
               fi
             done
 
-            CLIENT_DATA_JSON+="{ \"WAURL\": \"$(jq -sRr @json <<<"$WAURL")\", \"PHURL\": \"$(jq -sRr @json <<<"$PHURL")\", \"NAME\": \"$(jq -sRr @json <<<"$NAME")\", \"PHONE\": \"$(jq -sRr @json <<<"$PHONE")\", \"FILTER\": \"$(jq -sRr @json <<<"$FILTER")\", \"ADDRESS\": \"$(jq -sRr @json <<<"$ADDRESS")\" }"
+            # Construct JSON object using jq
+            CLIENT_OBJECT_JSON=$(jq -n \
+              --arg waurl "$WAURL" \
+              --arg phurl "$PHURL" \
+              --arg name "$NAME" \
+              --arg phone "$PHONE" \
+              --arg filter "$FILTER" \
+              --arg address "$ADDRESS" \
+              '{WAURL: $waurl, PHURL: $phurl, NAME: $name, PHONE: $phone, FILTER: $filter, ADDRESS: $address}')
+
+            CLIENT_DATA_JSON+="$CLIENT_OBJECT_JSON" # Append the jq-generated JSON object
 
             echo "Client $CLIENT_NUM:"
             echo "Name: $NAME"
@@ -92,7 +102,7 @@ jobs:
           CLIENT_DATA_JSON+="]"
           echo "End of client list."
 
-          echo "client_data_json_output=$CLIENT_DATA_JSON" >> $GITHUB_OUTPUT # Use GITHUB_OUTPUT - Corrected
+          echo "client_data_json_output=$CLIENT_DATA_JSON" >> $GITHUB_OUTPUT
 
       - name: Set client_data_json environment variable # NEW STEP - Claude's Suggestion
         if: steps.parse_clients_file.outputs.file_exists_output == 'true'
