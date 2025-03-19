@@ -1,4 +1,4 @@
-name: Update Multiple Clients v.10.07a
+name: Update Multiple Clients v.10.08a
 
 on:
   push:
@@ -22,7 +22,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
 
-      - name: Check and Parse .clients file
+            - name: Check and Parse .clients file
         id: parse_clients_file
         run: |
           FILE_EXISTS="false"
@@ -41,16 +41,10 @@ jobs:
 
           echo "file_exists_output=$FILE_EXISTS" >> $GITHUB_OUTPUT
 
-          CLIENT_DATA_JSON="["
-          FIRST_CLIENT=true
-          echo "Clients found in .clients file:"
+          CLIENT_DATA_JSON=$(jq -n --argjson clients '[]' '$clients') # Initialize as empty JSON array
           CLIENT_NUM=1
+          echo "Clients found in .clients file:"
           while IFS= read -r LINE; do
-            if ! $FIRST_CLIENT; then
-              CLIENT_DATA_JSON+=","
-            fi
-            FIRST_CLIENT=false
-
             WAURL=""
             PHURL=""
             NAME=""
@@ -78,7 +72,19 @@ jobs:
               fi
             done
 
-            CLIENT_DATA_JSON+="{ \"WAURL\": \"$(jq -sRr @json <<<"$WAURL")\", \"PHURL\": \"$(jq -sRr @json <<<"$PHURL")\", \"NAME\": \"$(jq -sRr @json <<<"$NAME")\", \"PHONE\": \"$(jq -sRr @json <<<"$PHONE")\", \"FILTER\": \"$(jq -sRr @json <<<"$FILTER")\", \"ADDRESS\": \"$(jq -sRr @json <<<"$ADDRESS")\" }"
+            # Construct JSON object using jq - NOW USING jq TO BUILD JSON
+            CLIENT_OBJECT_JSON=$(jq -n \
+              --arg waurl "$WAURL" \
+              --arg phurl "$PHURL" \
+              --arg name "$NAME" \
+              --arg phone "$PHONE" \
+              --arg filter "$FILTER" \
+              --arg address "$ADDRESS" \
+              '{WAURL: $waurl, PHURL: $phurl, NAME: $name, PHONE: $phone, FILTER: $filter, ADDRESS: $address}')
+
+            # Append to JSON array using jq
+            CLIENT_DATA_JSON=$(jq --arg client_obj "$CLIENT_OBJECT_JSON" '. + [$client_obj | fromjson]' <<< "$CLIENT_DATA_JSON")
+
 
             echo "Client $CLIENT_NUM:"
             echo "Name: $NAME"
@@ -89,7 +95,6 @@ jobs:
             echo "Address: $ADDRESS"
             CLIENT_NUM=$((CLIENT_NUM + 1))
           done < .clients
-          CLIENT_DATA_JSON+="]"
           echo "End of client list."
 
           echo "client_data_json_output=$CLIENT_DATA_JSON" >> $GITHUB_OUTPUT
