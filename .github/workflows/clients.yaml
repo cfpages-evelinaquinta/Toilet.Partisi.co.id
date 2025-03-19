@@ -1,4 +1,4 @@
-name: Update Multiple Clients v.10.08
+name: Update Multiple Clients v.10.07a
 
 on:
   push:
@@ -78,17 +78,7 @@ jobs:
               fi
             done
 
-            # Construct JSON object using jq
-            CLIENT_OBJECT_JSON=$(jq -n \
-              --arg waurl "$WAURL" \
-              --arg phurl "$PHURL" \
-              --arg name "$NAME" \
-              --arg phone "$PHONE" \
-              --arg filter "$FILTER" \
-              --arg address "$ADDRESS" \
-              '{WAURL: $waurl, PHURL: $phurl, NAME: $name, PHONE: $phone, FILTER: $filter, ADDRESS: $address}')
-
-            CLIENT_DATA_JSON+="$CLIENT_OBJECT_JSON" # Append the jq-generated JSON object
+            CLIENT_DATA_JSON+="{ \"WAURL\": \"$(jq -sRr @json <<<"$WAURL")\", \"PHURL\": \"$(jq -sRr @json <<<"$PHURL")\", \"NAME\": \"$(jq -sRr @json <<<"$NAME")\", \"PHONE\": \"$(jq -sRr @json <<<"$PHONE")\", \"FILTER\": \"$(jq -sRr @json <<<"$FILTER")\", \"ADDRESS\": \"$(jq -sRr @json <<<"$ADDRESS")\" }"
 
             echo "Client $CLIENT_NUM:"
             echo "Name: $NAME"
@@ -256,10 +246,10 @@ jobs:
 
               declare -A all_filters
               CLIENTS_JSON="${{ env.client_data_json }}"
-              echo "DEBUG: CLIENTS_JSON: $CLIENTS_JSON" # Debug print - SHOULD BE HERE
               jq -c '.[]' <<< "$CLIENTS_JSON" | while read client; do
                 process_client "$client"
               done
+              echo "DEBUG: CLIENTS_JSON: $CLIENTS_JSON" # Debug print - MOVE THIS LINE AFTER jq
 
               echo "Filters from other clients: ${!all_filters[@]}" # Log filters from other clients
 
