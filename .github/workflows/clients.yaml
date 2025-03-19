@@ -1,4 +1,4 @@
-name: Update Multiple Clients v.10.05
+name: Update Multiple Clients v.10.06
 
 on:
   push:
@@ -106,6 +106,7 @@ jobs:
 
       - name: Process Replace Clients
         if: env.exists == 'true'
+        shell: bash
         run: |
           # Function to escape special characters for sed
           escape_for_sed() {
@@ -241,7 +242,7 @@ jobs:
 
               declare -A all_filters
               CLIENTS_JSON="${{ env.client_data_json }}"
-              echo "DEBUG: CLIENTS_JSON: $CLIENTS_JSON" # Add a debug print to verify
+              echo "DEBUG: CLIENTS_JSON: $CLIENTS_JSON" # Debug print - SHOULD BE HERE
               jq -c '.[]' <<< "$CLIENTS_JSON" | while read client; do
                 process_client "$client"
               done
@@ -466,8 +467,8 @@ jobs:
 
           CLIENTS_JSON="${{ env.client_data_json }}"
           jq -c '.[]' <<< "$CLIENTS_JSON" | while read client; do
-             process_client "$client"
-           done
+            process_client "$client"
+          done
 
       - name: Commit and push changes
         if: env.exists == 'true' && inputs.dry_run != 'true'
