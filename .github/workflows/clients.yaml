@@ -1,4 +1,4 @@
-name: Update Multiple Clients v.10.09a
+name: Update Multiple Clients v.10.10a
 
 on:
   push:
@@ -39,7 +39,7 @@ jobs:
             exit 1
           fi
 
-          echo "file_exists_output=$FILE_EXISTS" >> $GITHUB_OUTPUT
+          echo "::set-output name=file_exists_output::$FILE_EXISTS" # Use ::set-output for file_exists_output
 
           CLIENT_DATA_JSON=$(jq -n --argjson clients '[]' '$clients') # Initialize as empty JSON array
           CLIENT_NUM=1
@@ -72,7 +72,7 @@ jobs:
               fi
             done
 
-            # Construct JSON object using jq - NOW USING jq TO BUILD JSON
+            # Construct JSON object using jq
             CLIENT_OBJECT_JSON=$(jq -n \
               --arg waurl "$WAURL" \
               --arg phurl "$PHURL" \
@@ -97,7 +97,7 @@ jobs:
           done < .clients
           echo "End of client list."
 
-          echo "client_data_json_output=$CLIENT_DATA_JSON" >> $GITHUB_OUTPUT
+          echo "::set-output name=client_data_json_output::$CLIENT_DATA_JSON" # Use ::set-output for client_data_json_output - Corrected
 
       - name: Set client_data_json environment variable # NEW STEP - Claude's Suggestion
         if: steps.parse_clients_file.outputs.file_exists_output == 'true'
