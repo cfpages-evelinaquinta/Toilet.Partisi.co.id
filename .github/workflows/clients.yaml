@@ -1,4 +1,4 @@
-name: Update Multiple Clients v.10.06
+name: Update Multiple Clients v.10.07
 
 on:
   push:
@@ -7,9 +7,9 @@ on:
   workflow_dispatch:
     inputs:
       dry_run:
-        description: 'Perform Real Run? (Uncheck for Dry Run, Check for Real Run)' # Improved label, now indicates unchecking for dry run
+        description: 'Perform Real Run? (Uncheck for Dry Run, Check for Real Run)'
         required: false
-        default: true # Default to dry run for manual dispatch (safer default)
+        default: true
         type: boolean
 
 permissions:
@@ -25,13 +25,13 @@ jobs:
       - name: Check and Parse .clients file
         id: parse_clients_file
         run: |
-          FILE_EXISTS="false" # Initialize FILE_EXISTS to false
+          FILE_EXISTS="false"
           if [[ -f .clients ]]; then
             if [[ -s .clients ]]; then
-              FILE_EXISTS="true" # Set to true only if file exists AND is not empty
+              FILE_EXISTS="true"
             else
               echo "File .clients is empty, nothing to do."
-              echo "File .clients is empty, nothing to do." # More informative message
+              echo "File .clients is empty, nothing to do."
               exit 0
             fi
           else
@@ -39,11 +39,11 @@ jobs:
             exit 1
           fi
 
-          echo "::set-output name=file_exists_output::$FILE_EXISTS" # Set step output 'file_exists_output'
+          echo "file_exists_output=$FILE_EXISTS" >> $GITHUB_OUTPUT # Use GITHUB_OUTPUT - Corrected
 
           CLIENT_DATA_JSON="["
           FIRST_CLIENT=true
-          echo "Clients found in .clients file:" # Start of user information output
+          echo "Clients found in .clients file:"
           CLIENT_NUM=1
           while IFS= read -r LINE; do
             if ! $FIRST_CLIENT; then
@@ -80,7 +80,7 @@ jobs:
 
             CLIENT_DATA_JSON+="{ \"WAURL\": \"$(jq -sRr @json <<<"$WAURL")\", \"PHURL\": \"$(jq -sRr @json <<<"$PHURL")\", \"NAME\": \"$(jq -sRr @json <<<"$NAME")\", \"PHONE\": \"$(jq -sRr @json <<<"$PHONE")\", \"FILTER\": \"$(jq -sRr @json <<<"$FILTER")\", \"ADDRESS\": \"$(jq -sRr @json <<<"$ADDRESS")\" }"
 
-            echo "Client $CLIENT_NUM:" # Output client information to logs
+            echo "Client $CLIENT_NUM:"
             echo "Name: $NAME"
             echo "Phone: $PHONE"
             echo "WhatsApp URL: $WAURL"
@@ -90,9 +90,13 @@ jobs:
             CLIENT_NUM=$((CLIENT_NUM + 1))
           done < .clients
           CLIENT_DATA_JSON+="]"
-          echo "End of client list." # End of user information output
+          echo "End of client list."
 
-          echo "::set-output name=client_data_json_output::$CLIENT_DATA_JSON" # Set step output 'client_data_json_output'
+          echo "client_data_json_output=$CLIENT_DATA_JSON" >> $GITHUB_OUTPUT # Use GITHUB_OUTPUT - Corrected
+
+      - name: Set client_data_json environment variable # NEW STEP - Claude's Suggestion
+        if: steps.parse_clients_file.outputs.file_exists_output == 'true'
+        run: echo "client_data_json=${{ steps.parse_clients_file.outputs.client_data_json_output }}" >> $GITHUB_ENV
 
       - name: Set env.exists from step output
         if: steps.parse_clients_file.outputs.file_exists_output == 'true'
