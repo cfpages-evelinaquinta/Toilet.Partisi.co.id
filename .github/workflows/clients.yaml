@@ -1,4 +1,4 @@
-name: Update Multiple Clients v.10.10a
+name: Update Multiple Clients v.10.10
 
 on:
   push:
@@ -39,12 +39,17 @@ jobs:
             exit 1
           fi
 
-          echo "::set-output name=file_exists_output::$FILE_EXISTS" # Use ::set-output for file_exists_output
+          echo "::set-output name=file_exists_output::$FILE_EXISTS" # Keep setting file_exists_output
 
           CLIENT_DATA_JSON=$(jq -n --argjson clients '[]' '$clients') # Initialize as empty JSON array
           CLIENT_NUM=1
           echo "Clients found in .clients file:"
           while IFS= read -r LINE; do
+            if ! $FIRST_CLIENT; then
+              CLIENT_DATA_JSON+=","
+            fi
+            FIRST_CLIENT=false
+
             WAURL=""
             PHURL=""
             NAME=""
@@ -82,9 +87,7 @@ jobs:
               --arg address "$ADDRESS" \
               '{WAURL: $waurl, PHURL: $phurl, NAME: $name, PHONE: $phone, FILTER: $filter, ADDRESS: $address}')
 
-            # Append to JSON array using jq
-            CLIENT_DATA_JSON=$(jq --arg client_obj "$CLIENT_OBJECT_JSON" '. + [$client_obj | fromjson]' <<< "$CLIENT_DATA_JSON")
-
+            CLIENT_DATA_JSON+="$CLIENT_OBJECT_JSON"
 
             echo "Client $CLIENT_NUM:"
             echo "Name: $NAME"
@@ -95,13 +98,10 @@ jobs:
             echo "Address: $ADDRESS"
             CLIENT_NUM=$((CLIENT_NUM + 1))
           done < .clients
+          CLIENT_DATA_JSON+="]"
           echo "End of client list."
 
-          echo "::set-output name=client_data_json_output::$CLIENT_DATA_JSON" # Use ::set-output for client_data_json_output - Corrected
-
-      - name: Set client_data_json environment variable # NEW STEP - Claude's Suggestion
-        if: steps.parse_clients_file.outputs.file_exists_output == 'true'
-        run: echo "client_data_json=${{ steps.parse_clients_file.outputs.client_data_json_output }}" >> $GITHUB_ENV
+          echo "::set-output name=client_data_json_output::$CLIENT_DATA_JSON"
 
       - name: Set env.exists from step output
         if: steps.parse_clients_file.outputs.file_exists_output == 'true'
@@ -250,7 +250,7 @@ jobs:
               FILE_LIST="$ALL_FILES"
 
               declare -A all_filters
-              CLIENTS_JSON="${{ env.client_data_json }}"
+              CLIENTS_JSON="${{ steps.parse_clients_file.outputs.client_data_json_output }}"
               jq -c '.[]' <<< "$CLIENTS_JSON" | while read client; do
                 process_client "$client"
               done
