@@ -1,4 +1,4 @@
-name: Update Multiple Clients v.10.08a
+name: Update Multiple Clients v.10.09a
 
 on:
   push:
@@ -22,7 +22,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
 
-            - name: Check and Parse .clients file
+      - name: Check and Parse .clients file
         id: parse_clients_file
         run: |
           FILE_EXISTS="false"
