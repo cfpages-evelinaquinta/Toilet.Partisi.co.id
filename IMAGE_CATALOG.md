@@ -37,8 +37,8 @@ Scope: article media planning only. No prose, HTML hydration, sitemap edit, depl
 | LOCAL-018 | `wp-content/uploads/2024/12/Partisi-Urinoir-3.jpg` | `/wp-content/uploads/2024/12/Partisi-Urinoir-3.jpg` | Partisi Urinoir 3 |
 | LOCAL-019 | `wp-content/uploads/2024/12/Partisi-Urinoir-2.png` | `/wp-content/uploads/2024/12/Partisi-Urinoir-2.png` | Partisi Urinoir 2 |
 | LOCAL-020 | `wp-content/uploads/2024/12/Partisi-Urinoir-4.png` | `/wp-content/uploads/2024/12/Partisi-Urinoir-4.png` | Partisi Urinoir 4 |
-| LOCAL-021 | `wp-content/uploads/2024/12/Cubicle-Toilet-Phenolic-Desain-Two-Tone-1.png` | `/wp-content/uploads/2024/12/Cubicle-Toilet-Phenolic-Desain-Two-Tone-1.png` | Cubicle Toilet Phenolic Desain Two Tone 1 |
-| LOCAL-022 | `wp-content/uploads/2024/12/cubicle-toilet-tipe-Single-Door.jpg` | `/wp-content/uploads/2024/12/cubicle-toilet-tipe-Single-Door.jpg` | cubicle toilet tipe Single Door |
+| LOCAL-021 | `wp-content/uploads/2026/10/kubikel-two-tone-arsitektur-v2.webp` | `/wp-content/uploads/2026/10/kubikel-two-tone-arsitektur-v2.webp` | Cubicle Toilet Phenolic Desain Two Tone 1 |
+| LOCAL-022 | `wp-content/uploads/2026/10/kubikel-single-door-arsitektur-v3.webp` | `/wp-content/uploads/2026/10/kubikel-single-door-arsitektur-v3.webp` | cubicle toilet tipe Single Door |
 | LOCAL-023 | `wp-content/uploads/2024/12/toilet-partisi.avif` | `/wp-content/uploads/2024/12/toilet-partisi.avif` | toilet partisi |
 | LOCAL-024 | `wp-content/uploads/2024/12/Partisi-Toilet-Sekolah-3.png` | `/wp-content/uploads/2024/12/Partisi-Toilet-Sekolah-3.png` | Partisi Toilet Sekolah 3 |
 | LOCAL-025 | `wp-content/uploads/2024/12/Partisi-Toilet-Masjid-3.png` | `/wp-content/uploads/2024/12/Partisi-Toilet-Masjid-3.png` | Partisi Toilet Masjid 3 |

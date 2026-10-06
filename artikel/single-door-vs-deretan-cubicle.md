@@ -72,7 +72,7 @@ sources:
 - **Image ID:** `LOCAL-022`
 - **Source type:** `local`
 - **Placement:** after the opening has answered the main question, before the first detailed H2
-- **Exact Markdown to insert:** `![Ilustrasi cubicle toilet tipe Single Door](/wp-content/uploads/2024/12/cubicle-toilet-tipe-Single-Door.jpg)`
+- **Exact Markdown to insert:** `![Ilustrasi cubicle toilet tipe Single Door](/wp-content/uploads/2026/10/kubikel-single-door-arsitektur-v3.webp)`
 - **Caption/credit:** Aset lokal proyek; jangan klaim sebagai dokumentasi proyek tertentu.
 - **Selection basis:** filename/source metadata identifies `cubicle toilet tipe Single Door` as relevant content media; no pixels were inspected.
 - **Hard boundary:** do not infer or describe unseen visual details, project ownership, location, people, brands, condition, performance, or outcome.
